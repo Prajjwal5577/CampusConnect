@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,10 +79,15 @@ const DashboardLayout = ({ children, userRole }: DashboardLayoutProps) => {
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <a href={item.url} className="flex items-center gap-3">
+                        <NavLink 
+                          to={item.url} 
+                          className={({ isActive }) => 
+                            `flex items-center gap-3 ${isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`
+                          }
+                        >
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
-                        </a>
+                        </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
