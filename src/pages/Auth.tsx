@@ -6,9 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap } from "lucide-react";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  email: z.string().email("Invalid email address").max(255, "Email too long"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password too long")
+    .regex(/[a-z]/, "Password must contain lowercase letter")
+    .regex(/[A-Z]/, "Password must contain uppercase letter")
+    .regex(/[0-9]/, "Password must contain number"),
+  full_name: z.string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name too long"),
+});
+
+const signinSchema = z.object({
+  email: z.string().email("Invalid email address").max(255, "Email too long"),
+  password: z.string().min(1, "Password is required"),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,16 +39,31 @@ const Auth = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("signup-email") as string;
-    const password = formData.get("signup-password") as string;
-    const fullName = formData.get("full-name") as string;
+    const data = {
+      email: formData.get("signup-email") as string,
+      password: formData.get("signup-password") as string,
+      full_name: formData.get("full-name") as string,
+    };
+
+    // Validate input
+    const validation = signupSchema.safeParse(data);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: validation.data.email,
+      password: validation.data.password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: validation.data.full_name,
         },
         emailRedirectTo: `${window.location.origin}/dashboard`,
       },
@@ -57,12 +91,27 @@ const Auth = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("signin-email") as string;
-    const password = formData.get("signin-password") as string;
+    const data = {
+      email: formData.get("signin-email") as string,
+      password: formData.get("signin-password") as string,
+    };
+
+    // Validate input
+    const validation = signinSchema.safeParse(data);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: validation.data.email,
+      password: validation.data.password,
     });
 
     setLoading(false);

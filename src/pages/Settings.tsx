@@ -9,12 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
+import { z } from "zod";
+
+const profileSchema = z.object({
+  full_name: z.string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name too long"),
+  department: z.string()
+    .trim()
+    .max(100, "Department name too long")
+    .optional()
+    .or(z.literal("")),
+  student_id: z.string()
+    .trim()
+    .max(20, "Student ID too long")
+    .optional()
+    .or(z.literal("")),
+});
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
 
@@ -39,21 +57,40 @@ const Settings = () => {
       .single();
 
     if (profile) {
-      setUserRole(profile.role);
       setProfile(profile);
     }
 
     setLoading(false);
   };
 
+  const { primaryRole, loading: roleLoading } = useUserRole(user);
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const formData = new FormData(e.target as HTMLFormElement);
-    const updates = {
+    const data = {
       full_name: formData.get('full_name') as string,
-      department: formData.get('department') as string,
-      student_id: formData.get('student_id') as string,
+      department: formData.get('department') as string || "",
+      student_id: formData.get('student_id') as string || "",
+    };
+
+    // Validate input
+    const validation = profileSchema.safeParse(data);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updates = {
+      full_name: validation.data.full_name,
+      department: validation.data.department || null,
+      student_id: validation.data.student_id || null,
     };
 
     const { error } = await supabase
@@ -74,9 +111,12 @@ const Settings = () => {
       title: "Success",
       description: "Profile updated successfully",
     });
+    
+    // Refresh profile data
+    checkAuth();
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -84,12 +124,12 @@ const Settings = () => {
     );
   }
 
-  if (!user || !userRole || !profile) {
+  if (!user || !primaryRole || !profile) {
     return null;
   }
 
   return (
-    <DashboardLayout userRole={userRole}>
+    <DashboardLayout userRole={primaryRole}>
       <div className="space-y-6 animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -129,7 +169,7 @@ const Settings = () => {
                     defaultValue={profile.department || ''}
                   />
                 </div>
-                {userRole === 'student' && (
+                {primaryRole === 'student' && (
                   <div className="space-y-2">
                     <Label htmlFor="student_id">Student ID</Label>
                     <Input
@@ -152,7 +192,7 @@ const Settings = () => {
             <CardContent className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Role</span>
-                <span className="text-sm font-medium capitalize">{userRole}</span>
+                <span className="text-sm font-medium capitalize">{primaryRole}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Account Created</span>
