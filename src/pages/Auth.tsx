@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap } from "lucide-react";
 
@@ -23,7 +23,6 @@ const Auth = () => {
     const email = formData.get("signup-email") as string;
     const password = formData.get("signup-password") as string;
     const fullName = formData.get("full-name") as string;
-    const role = formData.get("role") as string;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -31,8 +30,8 @@ const Auth = () => {
       options: {
         data: {
           full_name: fullName,
-          role: role,
         },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
 
@@ -153,19 +152,6 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select name="role" defaultValue="student" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="faculty">Faculty</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <Input
                     id="signup-password"
@@ -179,6 +165,9 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Creating account..." : "Create Account"}
                 </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  New accounts are registered as students by default
+                </p>
               </form>
             </TabsContent>
           </Tabs>

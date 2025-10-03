@@ -6,11 +6,11 @@ import StudentDashboard from "@/components/dashboard/StudentDashboard";
 import FacultyDashboard from "@/components/dashboard/FacultyDashboard";
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import { Loader2 } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,18 +23,6 @@ const Dashboard = () => {
       }
 
       setUser(session.user);
-
-      // Get user profile to determine role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profile) {
-        setUserRole(profile.role);
-      }
-
       setLoading(false);
     };
 
@@ -46,16 +34,6 @@ const Dashboard = () => {
           navigate("/auth");
         } else if (session) {
           setUser(session.user);
-          
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
-            .single();
-
-          if (profile) {
-            setUserRole(profile.role);
-          }
         }
       }
     );
@@ -63,7 +41,9 @@ const Dashboard = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  if (loading) {
+  const { primaryRole, loading: roleLoading } = useUserRole(user);
+
+  if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -71,15 +51,15 @@ const Dashboard = () => {
     );
   }
 
-  if (!user || !userRole) {
+  if (!user || !primaryRole) {
     return null;
   }
 
   return (
     <>
-      {userRole === "student" && <StudentDashboard user={user} />}
-      {userRole === "faculty" && <FacultyDashboard user={user} />}
-      {userRole === "admin" && <AdminDashboard user={user} />}
+      {primaryRole === "student" && <StudentDashboard user={user} />}
+      {primaryRole === "faculty" && <FacultyDashboard user={user} />}
+      {primaryRole === "admin" && <AdminDashboard user={user} />}
     </>
   );
 };
